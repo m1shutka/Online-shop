@@ -1,4 +1,5 @@
 ﻿import sqlite3
+from datetime import date
 
 class DbReader():
     def __init__(self):
@@ -56,13 +57,39 @@ class DbReader():
     def get_all_oredrs(self):
         """Получение списка всех заказов"""
         cursor = self.__db.cursor()
-        return cursor.execute("SELECT * FROM orders").fetchall()[::-1]
+        return cursor.execute("SELECT * FROM orders").fetchall()
 
     def process_order(self, order_id):
         """Изменение статуса заказа"""
         cursor = self.__db.cursor()
         cursor.execute("UPDATE orders SET processed=?  WHERE order_id=?", (1, order_id))
         self.__db.commit()
+
+    def create_order(self,user_id):
+        """Оформление заказа"""
+        cursor = self.__db.cursor()
+        items = self.get_user_cart(user_id)
+        cart = ''
+        for i in items:
+            cart += i + ' '
+        cart = cart[:len(cart)-1]
+        current_date = date.today()
+        cursor.execute("INSERT INTO orders (user_id, cart, processed, date, order_id) VALUES (?, ?, ?, ?, ?)", (user_id, cart, 0, str(current_date.day)+'.'+str(current_date.month)+'.'+str(current_date.year), self.rand_order_id()))
+        self.__db.commit()
+
+    def rand_order_id(self):
+        """Генерирование случайного id товара"""
+        last_id = self.get_last_order_id()
+        new_id = last_id[:3]+str(int(last_id[2:])+1)
+        while len(new_id) < 9:
+            new_id = new_id[:3]+ '0' + new_id[3:]
+        return new_id
+
+    def get_last_order_id(self):
+        """Получение последнего зарегестрированного id"""
+        cursor = self.__db.cursor()
+        orders = cursor.execute("SELECT * FROM orders").fetchall()
+        return orders[len(orders)-1][4]
 
 
 
@@ -113,7 +140,12 @@ class DbReader():
                 return False
         else:
             return False
-            
+
+
+    def clear_cart(self, user_id):
+        cursor = self.__db.cursor()
+        cursor.execute("UPDATE cart SET items=? WHERE user_id = ?", ('', user_id))
+        self.__db.commit()
 
 
     #Методы дляь пользователей

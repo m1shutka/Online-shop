@@ -25,17 +25,45 @@ def str_to_str(items):
 
 @app.route('/complete_remove/<id>', methods = ['POST', 'GET'])
 def complete_remove(id):
-    reader.add_item_in_cart(local_id, id)
+    global local_id
+    if local_id != None:
+        while reader.is_item_in_cart(local_id, id):
+            reader.erase_item_from_cart(local_id, id)
+    else:
+        while id in local_cart:
+            local_cart.remove(id)
     return redirect('/cart')
+
+@app.route('/complete_remove_from_mian/<id>', methods = ['POST', 'GET'])
+def complete_remove_from_mian(id):
+    global local_id
+    global local_cart
+    if local_id != None:
+        while reader.is_item_in_cart(local_id, id):
+            reader.erase_item_from_cart(local_id, id)
+    else:
+        while id in local_cart:
+            local_cart.remove(id)
+    return redirect('/')
 
 @app.route('/plus_item/<id>', methods = ['POST', 'GET'])
 def plus_item(id):
-    reader.add_item_in_cart(local_id, id)
+    global local_id
+    global local_cart
+    if local_id != None:
+        reader.add_item_in_cart(local_id, id)
+    else:
+        local_cart.append(id)
     return redirect('/cart')
 
 @app.route('/minus_item/<id>', methods = ['POST', 'GET'])
 def minus_item(id):
-    reader.erase_item_from_cart(local_id, id)
+    global local_id
+    global local_cart
+    if local_id != None:
+        reader.erase_item_from_cart(local_id, id)
+    else:
+        local_cart.remove(id)
     return redirect('/cart')
 
 @app.route('/process_order/<id>', methods = ['POST', 'GET'])
@@ -45,6 +73,8 @@ def process_order(id):
 
 @app.route('/add_item_in_cart/<id>', methods = ['POST', 'GET'])
 def add_item_in_cart(id):
+    global local_cart
+    global local_id
     if local_id == None:
         local_cart.append(id)
     else:
@@ -71,7 +101,7 @@ def index():
             item_info = []
             item_info.append(i)
             if reader.is_item_in_cart(local_id, i[0]):
-                item_info.append(['В корзине', '/erase_item_from_cart/', 'btn btn-success'])
+                item_info.append(['В корзине', '/complete_remove_from_mian/', 'btn btn-success'])
             else:
                 item_info.append(['В корзину', '/add_item_in_cart/', 'btn btn-primary'])
             items_info.append(item_info)
@@ -87,33 +117,39 @@ def index():
             item_info = []
             item_info.append(i)
             if i[0] in local_cart:
-                 item_info.append(['В корзине', '/erase_item_from_cart/', 'btn btn-success'])
+                item_info.append(['В корзине', '/complete_remove_from_mian/', 'btn btn-success'])
             else:
                 item_info.append(['В корзину', '/add_item_in_cart/', 'btn btn-primary'])
             items_info.append(item_info)
 
         header_tegs = [['Главная', '#', 'nav-link px-2 link-secondary'], ['Корзина', '/cart', 'nav-link px-2']]
         header_buttons = [['Войти', '/sign_in', 'btn btn-outline-primary'], ['Зарегистрироваться', '/registration', "btn btn-primary"]]
-    
     return render_template('index.html', items=items_info, header_tegs=header_tegs, header_buttons=header_buttons)
 
 
 @app.route('/sign_in', methods=['POST', 'GET'])
 def sign_in():
     global local_id
+    global local_cart
+    errors = []
     if request.method == 'POST':
         login = request.form['login']
         password = request.form['password']
         if reader.is_registered(login):
             local_id = reader.password_check(login, password)
             if local_id != None:
+                for i in local_cart:
+                    reader.add_item_in_cart(local_id, i)
+                local_cart.clear()
                 return redirect('/')
             else:
-                return render_template('sign_in.html')
+                errors.append(['Неверный логин или пароль!', 'alert alert-danger alirt-dismissible fade show'])
+                return render_template('sign_in.html', errors=errors)
         else:
-            return render_template('sign_in.html')
+            errors.append(['Неверный логин или пароль!', 'alert alert-danger alirt-dismissible fade show'])
+            return render_template('sign_in.html', errors=errors)
     else:
-        return render_template('sign_in.html')
+        return render_template('sign_in.html', errors=errors)
 
 @app.route('/create_new_item', methods=['POST', 'GET'])
 def create_new_item():
@@ -129,19 +165,26 @@ def create_new_item():
 @app.route('/registration', methods=['POST', 'GET'])
 def registration():
     global local_id
+    global local_cart
+    errors = []
     if request.method == 'POST':
         name = request.form['name']
         phone = request.form['phone']
         login = request.form['login']
         password = request.form['password']
-        if not reader.is_registered(login):
-            reader.add_user(name, phone, login, password)
-            local_id = reader.password_check(login, password)
-            return redirect('/')
+        if len(name) > 0 and len(phone) == 11:
+            if not reader.is_registered(login):
+                reader.add_user(name, phone, login, password)
+                local_id = reader.password_check(login, password)
+                return redirect('/')
+            else:
+                errors.append(['Пользователь с таким логином уже существует!', 'alert alert-danger alirt-dismissible fade show'])
+                return render_template('registration.html', errors=errors)
         else:
-            return render_template('registration.html')
+            errors.append(['Нормально данные введи!', 'alert alert-danger alirt-dismissible fade show'])
+            return render_template('registration.html', errors=errors)
     else:
-        return render_template('registration.html')
+        return render_template('registration.html', errors=errors)
 
 @app.route('/orders')
 def orders():
@@ -160,13 +203,24 @@ def orders():
         else:
             order_info.append(['Обработать', f'/process_order/{i[4]}', "btn btn-warning"])
         data.append(order_info)
-    print(data)
     return render_template('orders.html', data=data)
 
-@app.route('/cart')
+@app.route('/cart', methods = ['POST', 'GET'])
 def cart():
     global local_id
     global local_cart
+    errors=[]
+    if request.method == 'POST':
+        if local_id != None:
+            if len(reader.get_user_cart(local_id)) > 0:
+                reader.create_order(local_id)
+                reader.clear_cart(local_id)
+                errors.append(['Заказ оформлен!', 'alert alert-success alirt-dismissible fade show'])
+            else:
+                errors.append(['Перед оформлением заказа в корзину нужно что-то добавить!', 'alert alert-danger alirt-dismissible fade show'])
+        else:
+            errors.append(['Перед оформлением заказа необходимо зарегистрироваться или войти!', 'alert alert-danger alirt-dismissible fade show'])
+            
     new_items = {}
     items_info = []
     if local_id == None:
@@ -183,8 +237,8 @@ def cart():
     for i in new_items.keys():
         items_info.append([i, str(new_items[i]), reader.get_item_name(i), reader.get_item_photo(i), reader.get_item_price(i)])
         total_sum += reader.get_item_price(i) * new_items[i]
-    print(items_info)
-    return render_template('cart.html', items=items_info, sum=total_sum)
+    print(errors)
+    return render_template('cart.html', items=items_info, sum=total_sum, errors=errors)
 
 @app.route('/exit')
 def exit():
