@@ -23,16 +23,25 @@ def str_to_str(items):
     result += '.'
     return result
 
-def str_to_dict(items):
-    items = items.split()
-    dict_items = {}
-    for i in items:
-        if i in dict_items.keys():
-            dict_items[i] += 1
-        else:
-            dict_items[i] = 1
-    return dict_items
+@app.route('/complete_remove/<id>', methods = ['POST', 'GET'])
+def complete_remove(id):
+    reader.add_item_in_cart(local_id, id)
+    return redirect('/cart')
 
+@app.route('/plus_item/<id>', methods = ['POST', 'GET'])
+def plus_item(id):
+    reader.add_item_in_cart(local_id, id)
+    return redirect('/cart')
+
+@app.route('/minus_item/<id>', methods = ['POST', 'GET'])
+def minus_item(id):
+    reader.erase_item_from_cart(local_id, id)
+    return redirect('/cart')
+
+@app.route('/process_order/<id>', methods = ['POST', 'GET'])
+def process_order(id):
+    reader.process_order(id)
+    return redirect('/orders')
 
 @app.route('/add_item_in_cart/<id>', methods = ['POST', 'GET'])
 def add_item_in_cart(id):
@@ -48,7 +57,7 @@ def erase_item_from_cart(id):
         if id in local_cart:
             local_cart.remove(id)
     else:
-        reader.erase_item_in_cart(local_id, id)
+        reader.erase_item_from_cart(local_id, id)
     return redirect('/')
 
 @app.route('/')
@@ -149,8 +158,9 @@ def orders():
         if i[2] == 1:
             order_info.append(['Обработано', '#', "btn btn-success"])
         else:
-            order_info.append(['Обработать', '/processin_order', "btn btn-warning"])
+            order_info.append(['Обработать', f'/process_order/{i[4]}', "btn btn-warning"])
         data.append(order_info)
+    print(data)
     return render_template('orders.html', data=data)
 
 @app.route('/cart')
@@ -171,8 +181,9 @@ def cart():
 
     total_sum = 0
     for i in new_items.keys():
-        items_info.append([i, new_items[i], reader.get_item_name(i), reader.get_item_photo(i), reader.get_item_price(i)])
-        total_sum += reader.get_item_price(i)
+        items_info.append([i, str(new_items[i]), reader.get_item_name(i), reader.get_item_photo(i), reader.get_item_price(i)])
+        total_sum += reader.get_item_price(i) * new_items[i]
+    print(items_info)
     return render_template('cart.html', items=items_info, sum=total_sum)
 
 @app.route('/exit')

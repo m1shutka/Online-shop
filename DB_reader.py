@@ -48,7 +48,6 @@ class DbReader():
         """Получение цены товара"""
         cursor = self.__db.cursor()
         price = cursor.execute("SELECT price FROM items WHERE item_id=?", (item_id,)).fetchone()[0]
-        print(price)
         return price
 
 
@@ -58,6 +57,12 @@ class DbReader():
         """Получение списка всех заказов"""
         cursor = self.__db.cursor()
         return cursor.execute("SELECT * FROM orders").fetchall()[::-1]
+
+    def process_order(self, order_id):
+        """Изменение статуса заказа"""
+        cursor = self.__db.cursor()
+        cursor.execute("UPDATE orders SET processed=?  WHERE order_id=?", (1, order_id))
+        self.__db.commit()
 
 
 
@@ -90,7 +95,10 @@ class DbReader():
         if items != None:
             new_items = items[0].split()
             new_items.remove(item_id)
-            cursor.execute("UPDATE cart SET items=? WHERE user_id = ?", (new_items, user_id))
+            items_str = ''
+            for i in new_items:
+                items_str += ' ' + i
+            cursor.execute("UPDATE cart SET items=? WHERE user_id = ?", (items_str[1:], user_id))
         self.__db.commit()
 
     def is_item_in_cart(self, user_id, item_id):
