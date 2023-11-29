@@ -35,20 +35,26 @@
                 </div>
                 <div class="col-md-7">
                     <div class="card-body">
+                        <br>
                         <h4 class="card-title">{{ i[2] }}</h4>
-                        <p class="card-text">{{ i[4] }} ₽</p>
-
+                        <br>
+                        <p class="card-text">Цена: {{ i[4] }} ₽</p>
+                        <p class="card-text">Количество: {{ i[1] }}</p>
                     </div>
                 </div>
                 <div class="col-md-2">
                     <br>
+                    <form action="/plus_item/{{ i[0] }}">
+                        <input type="submit" class="btn btn-primary" value="Добавить +1">
+                    </form>
                     <br>
-                    <a href="#" class="btn btn-primary">-</a>
-                    <a>{{ i[1] }}</a>
-                    <a href="#" class="btn btn-primary">+</a>
+                    <form action="/minus_item/{{ i[0] }}">
+                        <input type="submit" class="btn btn-primary" value="Убрать       -1">
+                    </form>
                     <br>
-                    <br>
-                    <a href="#" class="btn btn-danger">Удалить</a>
+                    <form action="/complete_remove/{{ i[0] }}">
+                        <input type="submit" class="btn btn-danger" value="Удалить">
+                    </form>
                 </div>
             </div>
 
